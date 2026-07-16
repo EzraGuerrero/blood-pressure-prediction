@@ -23,7 +23,7 @@ A real-world data science project that predicts systolic blood pressure using NH
 
 3. Run app:
     ```bash
-    streamlit run app.py
+    streamlit run blood_pressure_app.py
 
 ### Model Performance:
 
