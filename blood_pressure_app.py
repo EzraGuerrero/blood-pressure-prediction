@@ -8,7 +8,7 @@ st.title("🩺 Blood Pressure Prediction App")
 st.markdown("Predict systolic BP from age, gender, BMI, and ethnicity.")
 
 # Load model
-model = joblib.load("../models/bp_model_improved.pkl")
+model = joblib.load("models/bp_model_improved.pkl")
 
 # Input form
 st.sidebar.header("Patient Input")
