@@ -2,13 +2,18 @@
 import streamlit as st
 import joblib
 import pandas as pd
+import os
 
 # Title
 st.title("🩺 Blood Pressure Prediction App")
 st.markdown("Predict systolic BP from age, gender, BMI, and ethnicity.")
 
-# Load model
-model = joblib.load("models/bp_model_improved.pkl")
+# Get the directory where the script is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, "models", "bp_model_improved.pkl")
+model = joblib.load(model_path)
+# Load model (relative path)
+# model = joblib.load("models/bp_model_improved.pkl")
 
 # Input form
 st.sidebar.header("Patient Input")
