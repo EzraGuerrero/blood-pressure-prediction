@@ -99,8 +99,8 @@ if st.button("Predict"):
     # Confidence interval
     ci_lower = prediction_raw - margin
     ci_upper = prediction_raw + margin
-S
-  
+
+    
     # =========== Mahalanobis Distance ===========
     
     # Get the scaler from the pipeline to transform input consistently
