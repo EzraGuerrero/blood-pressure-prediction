@@ -53,11 +53,38 @@ if st.button("Predict"):
     # Predict
     prediction_scaled = model.predict(input_data)[0]
     prediction_raw = prediction_scaled * 15.0 + 120.0 # Reverse scale: mean=120, std=15
-    
+
     # Display result
     st.subheader("Prediction")
     st.metric("Predicted Systolic BP (mmHg)", f"{prediction_raw:.1f}")
+
+    if prediction_raw < 120:
+        status = "Normal"
+        advice = "Good news! Your predicted systolic BP is below 120 mm Hg — within the normal range. Maintain healthy habits for long-term wellness."
+        color = "green"
+    elif 120 <= prediction_raw <= 129:
+        status = "Elevated"
+        advice = "Your predicted systolic BP is 120–129 mm Hg. This may signal early-stage risk; consider regular monitoring and lifestyle adjustments."
+        color = "yellow"
+    elif 130 <= prediction_raw <= 139:
+        status = "Stage 1 Hypertension"
+        advice = "Your predicted systolic BP is 130–139 mm Hg. A healthcare provider should evaluate your risk factors."
+        color = "orange"
+    elif 140 <= prediction_raw <= 179:
+        status = "Stage 2 Hypertension"
+        advice = "Your predicted systolic BP is 140 mm Hg or higher. Please schedule a medical checkup to discuss next steps."
+        color = "red"
+    else:  # >= 180
+        status = "Hypertensive Crisis"
+        advice = "Your predicted systolic BP is above 180 mm Hg. This requires urgent medical evaluation — do not delay care!"
+        color = "purple"
+
+    # Display health status
+    st.subheader("📊 Health Status")
+    st.markdown(f"<span style='font-size: 1.5em; color: {color};'>{status}</span>", unsafe_allow_html=True)
+    st.info(advice)
     
+  
     # Add info
     st.markdown("---")
     st.caption("Model trained on NHANES August 2021-August 2023 data. Not for medical diagnosis.")
