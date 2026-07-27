@@ -84,37 +84,23 @@ if st.button("Predict"):
     })
 
     
-<<<<<<< HEAD
     # =========== Prediction ===========
     prediction_raw = pipeline.predict(input_data)[0]
 
 
     # =========== Confidence Interval ===========
-=======
-    # ===== Prediction =====
-    prediction_scaled = model.predict(input_data)[0]
-    prediction_raw = prediction_scaled * 15.0 + 120.0 # Reverse scale: mean=120, std=15
-
-
-    # ===== Confidence Interval =====
->>>>>>> main
     # Calculate t-critical value for 95% confidence
     df = n_train - p_features -1 # degrees of freedom
     t_crit = stats.t.ppf(0.975, df)
 
     # Margin of error (in raw BP units)
-<<<<<<< HEAD
     margin = t_crit * sigma_residuals
-=======
-    margin = t_crit * sigma_residuals * 15.0 # Multiply by 15 to convert from scaled to raw
->>>>>>> main
 
     # Confidence interval
     ci_lower = prediction_raw - margin
     ci_upper = prediction_raw + margin
-
-<<<<<<< HEAD
-    
+S
+  
     # =========== Mahalanobis Distance ===========
     
     # Get the scaler from the pipeline to transform input consistently
@@ -147,31 +133,6 @@ if st.button("Predict"):
 
     
     # =========== Display Results ===========
-=======
-    # ===== Mahalanobis Distance =====
-    # Convert input to numpy array (same order as training)
-    input_array = np.array([
-        (age - 45.5) / 18.5,  # RIDAGEYR_scaled
-        gender_code,           # RIAGENDR
-        (bmi - 28.0) / 6.0,   # BMXBMI_scaled
-        1 if eth_code == 2 else 0,  # eth_2.0
-        1 if eth_code == 3 else 0,  # eth_3.0
-        1 if eth_code == 4 else 0,  # eth_4.0
-        1 if eth_code == 5 else 0   # eth_5.0
-    ])
-
-    # Compute Mahalanobis distance
-    diff = input_array - mean_vector
-    mahalanobis_dist = np.sqrt(diff @ cov_matrix_inv @ diff.T)
-
-    # Set threshold (95% confidence)
-    threshold = np.sqrt(chi2.ppf(0.95, df=p_features))
-
-    # Check if OOD
-    is_ood = mahalanobis_dist > threshold
-    
-    # ===== Display Results =====
->>>>>>> main
 
     # 1) Prediction
     st.subheader("Prediction")
