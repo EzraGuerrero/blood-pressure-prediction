@@ -18,8 +18,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 
 # Load model
-model_path = os.path.join(MODELS_DIR, "bp_model_improved.pkl")
-model = joblib.load(model_path)
+pipeline_path = os.path.join(MODELS_DIR, "bp_pipeline.pkl")
+pipeline = joblib.load(pipeline_path)
 
 # Load confidence interval data 
 sigma_residuals_path = os.path.join(MODELS_DIR, "sigma_residuals.pkl")
@@ -37,9 +37,7 @@ training_info_path = os.path.join(MODELS_DIR, "training_info.pkl")
 training_info = joblib.load(training_info_path)
 n_train = training_info["n"]
 p_features = training_info["p"]
-#Hardcoded features
-#n_train = 5961
-#p_features = 7
+
 
 # ------------- STREAMLIT SETUP & INPUT -------------
 
@@ -70,48 +68,59 @@ eth_code = ethnicity_map[ethnicity]
 
 # Wrap into Predict Button
 st.markdown("---")
+
 if st.button("Predict"):
     
-    # ===== Input Preparation: create input DataFrame =====
+    # =========== Prepare input data (input DataFrame) ===========
+
     input_data = pd.DataFrame({
-        "RIDAGEYR_scaled": [(age - 45.5) / 18.5], # Mean=45.5, std=18.5 (from training)
-        "RIAGENDR": [gender_code],
-        "BMXBMI_scaled": [(bmi - 28.0) / 6.0],  # Mean=28.0, std=6.0
+        "RIDAGEYR": [age],          # Raw age (e.g., 50)
+        "BMXBMI": [bmi],            # Raw BMI (e.g., 28.5)
+        "RIAGENDR": [gender_code],  # 1 or 2
         "eth_2.0": [1 if eth_code == 2 else 0],
         "eth_3.0": [1 if eth_code == 3 else 0],
         "eth_4.0": [1 if eth_code == 4 else 0],
         "eth_5.0": [1 if eth_code == 5 else 0]
     })
+
     
-    # ===== Prediction =====
-    prediction_scaled = model.predict(input_data)[0]
-    prediction_raw = prediction_scaled * 15.0 + 120.0 # Reverse scale: mean=120, std=15
+    # =========== Prediction ===========
+    prediction_raw = pipeline.predict(input_data)[0]
 
 
-    # ===== Confidence Interval =====
+    # =========== Confidence Interval ===========
     # Calculate t-critical value for 95% confidence
     df = n_train - p_features -1 # degrees of freedom
     t_crit = stats.t.ppf(0.975, df)
 
     # Margin of error (in raw BP units)
-    margin = t_crit * sigma_residuals * 15.0 # Multiply by 15 to convert from scaled to raw
+    margin = t_crit * sigma_residuals
 
     # Confidence interval
     ci_lower = prediction_raw - margin
     ci_upper = prediction_raw + margin
 
-    # ===== Mahalanobis Distance =====
+    
+    # =========== Mahalanobis Distance ===========
+    
+    # Get the scaler from the pipeline to transform input consistently
+    scaler = pipeline.named_steps['preprocessor'].named_transformers_['num']
+    
+    # Transform the raw input using the SAME scaler the pipeline uses
+    age_scaled = scaler.transform([[age, bmi]])[0][0]  # Scaled age
+    bmi_scaled = scaler.transform([[age, bmi]])[0][1]  # Scaled BMI
+
     # Convert input to numpy array (same order as training)
     input_array = np.array([
-        (age - 45.5) / 18.5,  # RIDAGEYR_scaled
-        gender_code,           # RIAGENDR
-        (bmi - 28.0) / 6.0,   # BMXBMI_scaled
-        1 if eth_code == 2 else 0,  # eth_2.0
-        1 if eth_code == 3 else 0,  # eth_3.0
-        1 if eth_code == 4 else 0,  # eth_4.0
-        1 if eth_code == 5 else 0   # eth_5.0
+        age_scaled,    # Scaled using pipeline's scaler
+        bmi_scaled,    # Scaled using pipeline's scaler
+        gender_code,
+        1 if eth_code == 2 else 0,
+        1 if eth_code == 3 else 0,
+        1 if eth_code == 4 else 0,
+        1 if eth_code == 5 else 0
     ])
-
+    
     # Compute Mahalanobis distance
     diff = input_array - mean_vector
     mahalanobis_dist = np.sqrt(diff @ cov_matrix_inv @ diff.T)
@@ -121,8 +130,9 @@ if st.button("Predict"):
 
     # Check if OOD
     is_ood = mahalanobis_dist > threshold
+
     
-    # ===== Display Results =====
+    # =========== Display Results ===========
 
     # 1) Prediction
     st.subheader("Prediction")
