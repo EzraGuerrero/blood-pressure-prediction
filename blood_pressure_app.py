@@ -1,19 +1,51 @@
-# app.py
+# ------------- IMPORTS -------------
+
 import streamlit as st
-import joblib
 import pandas as pd
+import numpy as np
+import joblib
 import os
+
+from scipy import stats
+from scipy.spatial.distance import mahalanobis
+from scipy.stats import chi2
+
+
+# ------------- LOAD FILES -------------
+
+# Setup paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+
+# Load model
+model_path = os.path.join(MODELS_DIR, "bp_model_improved.pkl")
+model = joblib.load(model_path)
+
+# Load confidence interval data 
+sigma_residuals_path = os.path.join(MODELS_DIR, "sigma_residuals.pkl")
+sigma_residuals = joblib.load(sigma_residuals_path)
+
+# Load Mahalanobis data
+mean_vector_path = os.path.join(MODELS_DIR, "mean_vector.pkl")
+mean_vector = joblib.load(mean_vector_path)
+
+cov_matrix_inv_path = os.path.join(MODELS_DIR, "cov_matrix_inv.pkl")
+cov_matrix_inv = joblib.load(cov_matrix_inv_path)
+
+# Load training info
+training_info_path = os.path.join(MODELS_DIR, "training_info.pkl")
+training_info = joblib.load(training_info_path)
+n_train = training_info["n"]
+p_features = training_info["p"]
+#Hardcoded features
+#n_train = 5961
+#p_features = 7
+
+# ------------- STREAMLIT SETUP & INPUT -------------
 
 # Title
 st.title("🩺 Blood Pressure Prediction App")
 st.markdown("Predict systolic BP from age, gender, BMI, and ethnicity.")
-
-# Get the directory where the script is located
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(BASE_DIR, "models", "bp_model_improved.pkl")
-model = joblib.load(model_path)
-# Load model (relative path)
-# model = joblib.load("models/bp_model_improved.pkl")
 
 # Input form
 st.sidebar.header("Patient Input")
@@ -33,13 +65,14 @@ ethnicity_map = {
 }
 eth_code = ethnicity_map[ethnicity]
 
+
+# ------------- PREDICTION -------------
+
 # Wrap into Predict Button
 st.markdown("---")
 if st.button("Predict"):
     
-    # Only run prediction when button i s clicked
-
-    # Create input DataFrame
+    # ===== Input Preparation: create input DataFrame =====
     input_data = pd.DataFrame({
         "RIDAGEYR_scaled": [(age - 45.5) / 18.5], # Mean=45.5, std=18.5 (from training)
         "RIAGENDR": [gender_code],
@@ -50,14 +83,57 @@ if st.button("Predict"):
         "eth_5.0": [1 if eth_code == 5 else 0]
     })
     
-    # Predict
+    # ===== Prediction =====
     prediction_scaled = model.predict(input_data)[0]
     prediction_raw = prediction_scaled * 15.0 + 120.0 # Reverse scale: mean=120, std=15
 
-    # Display result
+
+    # ===== Confidence Interval =====
+    # Calculate t-critical value for 95% confidence
+    df = n_train - p_features -1 # degrees of freedom
+    t_crit = stats.t.ppf(0.975, df)
+
+    # Margin of error (in raw BP units)
+    margin = t_crit * sigma_residuals * 15.0 # Multiply by 15 to convert from scaled to raw
+
+    # Confidence interval
+    ci_lower = prediction_raw - margin
+    ci_upper = prediction_raw + margin
+
+    # ===== Mahalanobis Distance =====
+    # Convert input to numpy array (same order as training)
+    input_array = np.array([
+        (age - 45.5) / 18.5,  # RIDAGEYR_scaled
+        gender_code,           # RIAGENDR
+        (bmi - 28.0) / 6.0,   # BMXBMI_scaled
+        1 if eth_code == 2 else 0,  # eth_2.0
+        1 if eth_code == 3 else 0,  # eth_3.0
+        1 if eth_code == 4 else 0,  # eth_4.0
+        1 if eth_code == 5 else 0   # eth_5.0
+    ])
+
+    # Compute Mahalanobis distance
+    diff = input_array - mean_vector
+    mahalanobis_dist = np.sqrt(diff @ cov_matrix_inv @ diff.T)
+
+    # Set threshold (95% confidence)
+    threshold = np.sqrt(chi2.ppf(0.95, df=p_features))
+
+    # Check if OOD
+    is_ood = mahalanobis_dist > threshold
+    
+    # ===== Display Results =====
+
+    # 1) Prediction
     st.subheader("Prediction")
     st.metric("Predicted Systolic BP (mmHg)", f"{prediction_raw:.1f}")
-
+    
+    # 2) Confidence Interval
+    st.subheader("🎯 Prediction Confidence")
+    st.markdown(f"**95% Confidence Interval**: {ci_lower:.1f} – {ci_upper:.1f} mmHg")
+    st.markdown(f"*(±{margin:.1f} mmHg)*")
+    
+    # 3) Health Status
     if prediction_raw < 120:
         status = "Normal"
         advice = "Good news! Your predicted systolic BP is below 120 mm Hg — within the normal range. Maintain healthy habits for long-term wellness."
@@ -79,13 +155,20 @@ if st.button("Predict"):
         advice = "Your predicted systolic BP is above 180 mm Hg. This requires urgent medical evaluation — do not delay care!"
         color = "purple"
 
-    # Display health status
     st.subheader("📊 Health Status")
     st.markdown(f"<span style='font-size: 1.5em; color: {color};'>{status}</span>", unsafe_allow_html=True)
     st.info(advice)
     
-  
-    # Add info
+    # 4) OOD Warning
+    st.subheader("⚠️ Input Reliability")
+    if is_ood:
+        st.warning(f"🚨 **Out-of-Distribution Input Detected**")
+        st.markdown(f"*This input is unusual compared to the training data (Mahalanobis distance: {mahalanobis_dist:.2f}, threshold: {threshold:.2f}). The prediction may be less reliable.*")
+    else:
+        st.success(f"✅ Input is within normal range (Mahalanobis distance: {mahalanobis_dist:.2f}, threshold: {threshold:.2f})")
+
+    
+    # 5) Disclaimer
     st.markdown("---")
     st.caption("Model trained on NHANES August 2021-August 2023 data. Not for medical diagnosis.")
 
