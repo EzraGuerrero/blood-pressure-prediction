@@ -27,5 +27,5 @@ A real-world data science project that predicts systolic blood pressure using NH
 
 ### Model Performance:
 
-- **R²**: 0.56
-- **RMSE**: 0.67 (scaled)
+- **R²**: 0.31
+- **RMSE**: 3.93 mmHg
