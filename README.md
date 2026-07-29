@@ -5,7 +5,7 @@ A real-world data science project that predicts systolic blood pressure using NH
 ## 📌 Features
 - Pulls public health data from NHANES
 - Cleans and normalizes data (age, gender, BMI, ethnicity)
-- Trains a linear regression model (R²: ~0.56)
+- Trains a linear regression model (R²: ~0.31)
 - Deploys a live Streamlit web app
 
 ## 🚀 Live Demo
