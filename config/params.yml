@@ -1,0 +1,14 @@
+model:
+    type: LinearRegression
+    random_state: 42
+
+data:
+    test_size: 0.2
+    random_state: 42
+
+features:
+    numeric: ["RIDAGEYR", "BMXBMI"]
+    categorical: ["RIAGENDR", "eth_2.0", "eth_3.0", "eth_4.0", "eth_5.0"]
+
+ood:
+    confidence: 0.95
