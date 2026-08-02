@@ -115,14 +115,14 @@ if st.button("Predict"):
     prediction_raw = pipeline.predict(input_data)[0]
 
 
-    # =========== Confidence Interval ===========
+    # =========== Prediction Interval ===========
     
     # Calculate t-critical value for 95% confidence
     df = n_train - p_features -1 # degrees of freedom
     t_crit = stats.t.ppf(0.975, df)
 
     # Margin of error (in raw BP units)
-    margin = t_crit * sigma_residuals
+    margin = t_crit * sigma_residuals * np.sqrt(1 + 1/n_train)
 
     # Confidence interval
     ci_lower = prediction_raw - margin
@@ -167,7 +167,7 @@ if st.button("Predict"):
     st.metric("Predicted Systolic BP (mmHg)", f"{prediction_raw:.1f}")
     
     # 2) Confidence Interval
-    st.subheader("Prediction Confidence")
+    st.subheader("Prediction Interval")
     st.markdown(f"**95% Confidence Interval**: {ci_lower:.1f} – {ci_upper:.1f} mmHg")
     st.markdown(f"*(±{margin:.1f} mmHg)*")
     
