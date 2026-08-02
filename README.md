@@ -1,11 +1,11 @@
 # 🩺 Blood Pressure Prediction App
 
-A real-world data science project that predicts systolic blood pressure using NHANES 2021–2022 data.
+A real-world data science project that predicts systolic blood pressure using NHANES 2021–2023 data.
 
 ## 📌 Features
 - Pulls public health data from NHANES
 - Cleans and normalizes data (age, gender, BMI, ethnicity)
-- Trains a linear regression model (R²: ~0.56)
+- Trains a linear regression model (R²: ~0.31)
 - Deploys a live Streamlit web app
 
 ## 🚀 Live Demo
@@ -28,4 +28,4 @@ A real-world data science project that predicts systolic blood pressure using NH
 ### Model Performance:
 
 - **R²**: 0.31
-- **RMSE**: 3.93 mmHg
+- **RMSE**: 15.48 mmHg
