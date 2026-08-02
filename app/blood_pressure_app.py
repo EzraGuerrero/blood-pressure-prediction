@@ -25,7 +25,8 @@ st.set_page_config(
 
 # Setup paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, "models")
+PARENT_DIR = os.path.dirname(BASE_DIR)
+MODELS_DIR = os.path.join(PARENT_DIR, "models")
 
 # Load model
 pipeline_path = os.path.join(MODELS_DIR, "bp_pipeline.pkl")
